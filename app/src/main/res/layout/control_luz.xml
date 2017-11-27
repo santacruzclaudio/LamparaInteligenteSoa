@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/holo_orange_dark"
+    android:orientation="vertical">
+
+    <TextView
+        android:id="@+id/textView1"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:layout_centerHorizontal="true"
+        android:text="Lampara Inteligente"
+        android:textSize="36sp"
+        tools:context=".MainActivity" />
+
+
+    <FrameLayout
+        android:id="@+id/FrameLed"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@+id/textView1"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true">
+
+        <ToggleButton
+            android:id="@+id/Led1"
+            android:layout_width="232dp"
+            android:layout_height="278dp"
+            android:layout_gravity="center"
+            android:background="@drawable/luzoff"
+            android:text="@string/vacio"
+            android:textOff="@string/vacio"
+            android:textOn="@string/vacio" />
+    </FrameLayout>
+</RelativeLayout>
