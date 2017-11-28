@@ -62,16 +62,8 @@ void loop() {
   logicaLuz();
   logicaPotenciometro();
   logicabluetooth();
- // Leemos el valor del pin
-  pulsador = digitalRead(pulsadorPin); //lee si el botón está pulsado
+  logicaPulsador();
   
-  if((pulsador==HIGH)&&(pulsadorAnt==LOW)){  //si el boton es pulsado y antes no lo estaba
-    estado=1-estado;
-    //delay(40);               //pausa de 40 ms
-    cambiarEstadoLuz();    
-    enviarAndroid();
-  }
-  pulsadorAnt=pulsador;      //actualiza el nuevo estado del boton          
 }
 
 //--------------------------------------------------------------------------
@@ -147,7 +139,6 @@ void logicaLuz(){
   // Guardamos el valor leido del ADC en una variable
   // El valor leido por el ADC (voltaje) aumenta de manera directamente proporcional
   // con respecto a la luz percibida por el LDR
-  delay(100);
   valorLuz= analogRead(pinLuz);
   if(valorLuz > 150 && ledEncendido)
   {
@@ -159,7 +150,7 @@ void leerSensores() {
   valorSonido = analogRead(pinSonido);
   valorLuz = analogRead(pinLuz); //lee el valor del sensor
   ValorPotenciometro = analogRead(pinPotenciometro);
-
+  pulsador = digitalRead(pulsadorPin); //lee si el botón está pulsado
 }
 
 void logicabluetooth(){
@@ -203,6 +194,16 @@ void enviarAndroid()
    }
 }
 
+void logicaPulsador(){
+  
+  if((pulsador==HIGH)&&(pulsadorAnt==LOW)){  //si el boton es pulsado y antes no lo estaba
+    estado=1-estado;
+    //delay(40);               //pausa de 40 ms
+    cambiarEstadoLuz();    
+    enviarAndroid();
+  }
+  pulsadorAnt=pulsador;      //actualiza el nuevo estado del boton          
+}
 void cambiarEstadoLuz(){
   
   if (ledEncendido) {
