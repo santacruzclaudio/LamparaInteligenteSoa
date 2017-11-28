@@ -13,7 +13,7 @@ import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.content.Intent;
 import android.util.Log;
-import android.view.Menu;
+import android.os.Vibrator;
 import android.view.View;
 import android.widget.Toast;
 import android.widget.ToggleButton;
@@ -47,6 +47,12 @@ public class MainActivity extends AppCompatActivity implements  SensorEventListe
     private SensorManager msensorManager;
     // Declaro y registro el sensor de acelerómetro
     private Sensor sensorAcelerometro;
+    // Declaro y registro el sensor de luz
+    Sensor sensorLuz;
+    //Si el sensor de luz supera el limite de los 200 envia señal de apagado
+    private static float MAXLIGHT = 60;
+    // Clase que maneja el vibrador
+    Vibrator vibrator;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -60,6 +66,12 @@ public class MainActivity extends AppCompatActivity implements  SensorEventListe
         msensorManager = (SensorManager)getSystemService(SENSOR_SERVICE);
         sensorAcelerometro = msensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         msensorManager.registerListener( this, sensorAcelerometro,SensorManager.SENSOR_DELAY_UI);
+
+
+        sensorLuz = msensorManager.getDefaultSensor(Sensor.TYPE_LIGHT);
+        msensorManager.registerListener( this, sensorLuz,SensorManager.SENSOR_DELAY_UI);
+        //Se declara el vibrador para avisar todos los cambios que vengan del arduino
+        vibrator = (Vibrator) getSystemService(VIBRATOR_SERVICE);
 
         // Ejecuta la conexión al bluetooth
         new ConnectBT().execute();
@@ -86,12 +98,10 @@ public class MainActivity extends AppCompatActivity implements  SensorEventListe
         {   try
             {
                 if(s.contains("B"))     {
-                    Log.d("SendBT", "Prendioooooooooo");
                     findViewById(R.id.Led1).setBackgroundResource(R.drawable.luzon);
                     estadoLampara=false;
                 }
                 else {
-                    Log.d("SendBT", "Se Apagooo");
                     findViewById(R.id.Led1).setBackgroundResource(R.drawable.luzoff );
                     estadoLampara=true;
                 }
@@ -196,10 +206,17 @@ public class MainActivity extends AppCompatActivity implements  SensorEventListe
         }
         @Override
         protected void onProgressUpdate(String... values) {
-            if(values[0].substring(0,1).contains("B"))
+            if(values[0].substring(0,1).contains("B")){
                 SendBt(values[0].substring(0,1));
-            if(values[0].substring(0,1).contains("A"))
-                SendBt(values[0].substring(0,1));
+                //Aviso que vino novedades del arduino
+                vibrator.vibrate(500);
+            }
+
+            if(values[0].substring(0,1).contains("A")) {
+                SendBt(values[0].substring(0, 1));
+                //Aviso que vino novedades del arduino
+                vibrator.vibrate(500);
+            }
         }
 
         @Override
@@ -226,37 +243,48 @@ public class MainActivity extends AppCompatActivity implements  SensorEventListe
 
     public void onSensorChanged(SensorEvent evento) {
         synchronized (this) {
-            long current_time = System.currentTimeMillis();
-            curX = evento.values[0];
-            curY = evento.values[1];
-            curZ = evento.values[2];
-            // Calculo de movimiento del acelerómetro
-            if (prevX == 0 && prevY == 0 && prevZ == 0) {
-                last_update = current_time;
-                last_movement = current_time;
-                prevX = curX;
-                prevY = curY;
-                prevZ = curZ;
-            }
-
-            long time_difference = current_time - last_update;
-            if (time_difference > 150) {
-                last_update = current_time;
-                double normal = Math.sqrt(Math.pow(curX, 2) + Math.pow(curX, 2) + Math.pow(curX, 2));
-                double normalAnterior = Math.sqrt(Math.pow(prevX, 2) + Math.pow(prevY, 2) + Math.pow(prevZ, 2));
-                double movement = Math.abs(normal - normalAnterior);
-                int limit = 10000000;
-                if (movement > 60 )
-                {   Log.d("SensorMovimiento","Se activo el sensor de movimientos:" +movement);
-                    if (estadoLampara)
-                        SendBt("B");
-                    else
-                        SendBt("A");
+            Sensor sensorUpdate = evento.sensor;
+            if (sensorUpdate.getType() == Sensor.TYPE_ACCELEROMETER) {
+                long current_time = System.currentTimeMillis();
+                curX = evento.values[0];
+                curY = evento.values[1];
+                curZ = evento.values[2];
+                // Calculo de movimiento del acelerómetro
+                if (prevX == 0 && prevY == 0 && prevZ == 0) {
+                    last_update = current_time;
+                    last_movement = current_time;
+                    prevX = curX;
+                    prevY = curY;
+                    prevZ = curZ;
                 }
-                prevX = curX;
-                prevY = curY;
-                prevZ = curZ;
-                last_update = current_time;
+
+                long time_difference = current_time - last_update;
+                if (time_difference > 150) {
+                    last_update = current_time;
+                    double normal = Math.sqrt(Math.pow(curX, 2) + Math.pow(curX, 2) + Math.pow(curX, 2));
+                    double normalAnterior = Math.sqrt(Math.pow(prevX, 2) + Math.pow(prevY, 2) + Math.pow(prevZ, 2));
+                    double movement = Math.abs(normal - normalAnterior);
+
+                    if (movement > 60) {
+                        if (estadoLampara)
+                            SendBt("B");
+                        else
+                            SendBt("A");
+                    }
+                    prevX = curX;
+                    prevY = curY;
+                    prevZ = curZ;
+                    last_update = current_time;
+                }
+            }
+            else if (sensorUpdate.getType() == Sensor.TYPE_LIGHT) {
+                float lightValue = evento.values[0];
+                //Si se supero el rango de luz y la lampara esta prendida se envia una señal para apagar
+                //la lampara.
+                if (lightValue > MAXLIGHT && !estadoLampara)
+                    SendBt("A");
+
+
             }
         }
     }
@@ -265,7 +293,8 @@ public class MainActivity extends AppCompatActivity implements  SensorEventListe
     protected void onResume() {
         super.onResume();
         msensorManager.registerListener(this, sensorAcelerometro, SensorManager.SENSOR_DELAY_NORMAL);
-        Log.d("onResume","Se activo:");
+        msensorManager.registerListener(this, sensorLuz, SensorManager.SENSOR_DELAY_NORMAL);
+
 
     }
 
@@ -273,5 +302,22 @@ public class MainActivity extends AppCompatActivity implements  SensorEventListe
     protected void onPause() {
         super.onPause();
         msensorManager.unregisterListener(this);
+    }
+    public void onDestroy()
+    {
+        super.onDestroy();
+
+        msensorManager.unregisterListener(this);
+
+        try
+        {
+            //Dont leave Bluetooth sockets open when leaving activity
+            btSocket.close();
+            Intent data = new Intent();
+            finish();
+
+        } catch (IOException e2) {
+            //insert code to deal with this
+        }
     }
 }
