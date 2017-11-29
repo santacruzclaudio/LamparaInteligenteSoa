@@ -171,7 +171,6 @@ void logicabluetooth(){
          cambiarEstadoLuz();
       break;
          default:
-         delay(500);
          Serial.println("Orden valida. Introduzca A o B.");
          Serial.println(input);
       }
